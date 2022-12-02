@@ -1,3 +1,7 @@
+trait Game {
+    fn game(&self, op: &RPS) -> u32;
+}
+
 #[derive(Clone)]
 enum RPS {
     ROCK = 1,
@@ -20,44 +24,21 @@ impl std::str::FromStr for RPS {
     }
 }
 
-impl RPS {
-    fn into_score(&self) -> u32 {
-        self.clone() as u32
-    }
-
-    fn win(&self) -> u32 {
-        self.into_score() + 6
-    }
-
-    fn draw(&self) -> u32 {
-        self.into_score() + 3
-    }
-
+impl Game for RPS {
     fn game(&self, op: &Self) -> u32 {
-        match (self, op) {
-            (RPS::ROCK, RPS::ROCK) => self.draw(),
-            (RPS::ROCK, RPS::PAPER) => self.into_score(),
-            (RPS::ROCK, RPS::SCISSORS) => self.win(),
-            (RPS::PAPER, RPS::ROCK) => self.win(),
-            (RPS::PAPER, RPS::PAPER) => self.draw(),
-            (RPS::PAPER, RPS::SCISSORS) => self.into_score(),
-            (RPS::SCISSORS, RPS::ROCK) => self.into_score(),
-            (RPS::SCISSORS, RPS::PAPER) => self.win(),
-            (RPS::SCISSORS, RPS::SCISSORS) => self.draw(),
-        }
+        (match (self, op) {
+            (RPS::ROCK, RPS::ROCK) => Outcome::DRAW,
+            (RPS::ROCK, RPS::PAPER) => Outcome::LOSE,
+            (RPS::ROCK, RPS::SCISSORS) => Outcome::WIN,
+            (RPS::PAPER, RPS::ROCK) => Outcome::WIN,
+            (RPS::PAPER, RPS::PAPER) => Outcome::DRAW,
+            (RPS::PAPER, RPS::SCISSORS) => Outcome::LOSE,
+            (RPS::SCISSORS, RPS::ROCK) => Outcome::LOSE,
+            (RPS::SCISSORS, RPS::PAPER) => Outcome::WIN,
+            (RPS::SCISSORS, RPS::SCISSORS) => Outcome::DRAW,
+        } as u32)
+            + self.clone() as u32
     }
-}
-
-pub fn part_1(input: &str) -> u32 {
-    input
-        .lines()
-        .map(|game| {
-            let (op, me) = game.split_once(" ").unwrap();
-            let op = op.parse::<RPS>().unwrap();
-            let me = me.parse::<RPS>().unwrap();
-            me.game(&op)
-        })
-        .sum()
 }
 
 #[derive(Clone)]
@@ -79,36 +60,45 @@ impl std::str::FromStr for Outcome {
     }
 }
 
-impl Outcome {
-    fn into_score(&self, v: RPS) -> u32 {
-        v as u32 + self.clone() as u32
-    }
-
+impl Game for Outcome {
     fn game(&self, op: &RPS) -> u32 {
-        match (self, op) {
-            (Outcome::WIN, RPS::ROCK) => self.into_score(RPS::PAPER),
-            (Outcome::WIN, RPS::PAPER) => self.into_score(RPS::SCISSORS),
-            (Outcome::WIN, RPS::SCISSORS) => self.into_score(RPS::ROCK),
-            (Outcome::LOSE, RPS::ROCK) => self.into_score(RPS::SCISSORS),
-            (Outcome::LOSE, RPS::PAPER) => self.into_score(RPS::ROCK),
-            (Outcome::LOSE, RPS::SCISSORS) => self.into_score(RPS::PAPER),
-            (Outcome::DRAW, RPS::ROCK) => self.into_score(RPS::ROCK),
-            (Outcome::DRAW, RPS::PAPER) => self.into_score(RPS::PAPER),
-            (Outcome::DRAW, RPS::SCISSORS) => self.into_score(RPS::SCISSORS),
-        }
+        (match (self, op) {
+            (Outcome::WIN, RPS::ROCK) => RPS::PAPER,
+            (Outcome::WIN, RPS::PAPER) => RPS::SCISSORS,
+            (Outcome::WIN, RPS::SCISSORS) => RPS::ROCK,
+            (Outcome::LOSE, RPS::ROCK) => RPS::SCISSORS,
+            (Outcome::LOSE, RPS::PAPER) => RPS::ROCK,
+            (Outcome::LOSE, RPS::SCISSORS) => RPS::PAPER,
+            (Outcome::DRAW, RPS::ROCK) => RPS::ROCK,
+            (Outcome::DRAW, RPS::PAPER) => RPS::PAPER,
+            (Outcome::DRAW, RPS::SCISSORS) => RPS::SCISSORS,
+        } as u32)
+            + self.clone() as u32
     }
 }
 
-pub fn part_2(input: &str) -> u32 {
+fn do_day2<T>(input: &str) -> u32
+where
+    T: Game + std::str::FromStr,
+    <T as std::str::FromStr>::Err: std::fmt::Debug,
+{
     input
         .lines()
         .map(|game| {
             let (op, outcome) = game.split_once(" ").unwrap();
             let op = op.parse::<RPS>().unwrap();
-            let outcome = outcome.parse::<Outcome>().unwrap();
+            let outcome = outcome.parse::<T>().unwrap();
             outcome.game(&op)
         })
         .sum()
+}
+
+pub fn part_1(input: &str) -> u32 {
+    do_day2::<RPS>(input)
+}
+
+pub fn part_2(input: &str) -> u32 {
+    do_day2::<Outcome>(input)
 }
 
 #[cfg(test)]
