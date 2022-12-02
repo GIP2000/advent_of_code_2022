@@ -1,3 +1,4 @@
+use std::collections::BinaryHeap;
 pub fn get_n_maxes<const N: usize>(input: &str) -> u32 {
     // O(N + nN + N)
     let mut maxes = [0; N];
@@ -13,6 +14,14 @@ pub fn get_n_maxes<const N: usize>(input: &str) -> u32 {
         }
     }
     return maxes.into_iter().sum::<u32>();
+}
+
+pub fn get_3_maxes_heap(input: &str) -> u32 {
+    let mut heap: BinaryHeap<u32> = BinaryHeap::new();
+    for chunk in input.split("\n\n") {
+        heap.push(chunk.lines().flat_map(str::parse::<u32>).sum());
+    }
+    return heap.pop().unwrap() + heap.pop().unwrap() + heap.pop().unwrap();
 }
 
 pub fn get_slow_n_maxes(input: &str, n: usize) -> u32 {
