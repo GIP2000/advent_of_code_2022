@@ -5,16 +5,17 @@ enum RPS {
     SCISSORS = 3,
 }
 
-impl From<&str> for RPS {
-    fn from(value: &str) -> Self {
-        match value {
-            "A" => Self::ROCK,
-            "B" => Self::PAPER,
-            "C" => Self::SCISSORS,
-            "X" => Self::ROCK,
-            "Y" => Self::PAPER,
-            "Z" => Self::SCISSORS,
-            _ => unreachable!(),
+impl std::str::FromStr for RPS {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "A" => Ok(Self::ROCK),
+            "B" => Ok(Self::PAPER),
+            "C" => Ok(Self::SCISSORS),
+            "X" => Ok(Self::ROCK),
+            "Y" => Ok(Self::PAPER),
+            "Z" => Ok(Self::SCISSORS),
+            _ => Err(()),
         }
     }
 }
@@ -49,12 +50,11 @@ impl RPS {
 
 pub fn part_1(input: &str) -> u32 {
     input
-        .split('\n')
-        .filter(|game| !game.is_empty())
+        .lines()
         .map(|game| {
             let (op, me) = game.split_once(" ").unwrap();
-            let op = RPS::from(op);
-            let me = RPS::from(me);
+            let op = op.parse::<RPS>().unwrap();
+            let me = me.parse::<RPS>().unwrap();
             me.game(&op)
         })
         .sum()
@@ -67,13 +67,14 @@ enum Outcome {
     DRAW = 3,
 }
 
-impl From<&str> for Outcome {
-    fn from(value: &str) -> Self {
-        match value {
-            "X" => Self::LOSE,
-            "Y" => Self::DRAW,
-            "Z" => Self::WIN,
-            _ => unreachable!(),
+impl std::str::FromStr for Outcome {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "X" => Ok(Self::LOSE),
+            "Y" => Ok(Self::DRAW),
+            "Z" => Ok(Self::WIN),
+            _ => Err(()),
         }
     }
 }
@@ -100,12 +101,11 @@ impl Outcome {
 
 pub fn part_2(input: &str) -> u32 {
     input
-        .split('\n')
-        .filter(|game| !game.is_empty())
+        .lines()
         .map(|game| {
             let (op, outcome) = game.split_once(" ").unwrap();
-            let op = RPS::from(op);
-            let outcome = Outcome::from(outcome);
+            let op = op.parse::<RPS>().unwrap();
+            let outcome = outcome.parse::<Outcome>().unwrap();
             outcome.game(&op)
         })
         .sum()
@@ -114,11 +114,7 @@ pub fn part_2(input: &str) -> u32 {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    const INPUT: &'static str = "A Y
-B X
-C Z";
-
+    const INPUT: &'static str = "A Y\nB X\nC Z";
     #[test]
     fn test() {
         assert_eq!(part_1(INPUT), 15);
