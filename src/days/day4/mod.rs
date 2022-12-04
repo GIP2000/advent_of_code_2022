@@ -20,13 +20,13 @@ pub fn part_2(input: &str) -> usize {
         .lines()
         .filter(|elves| {
             let (elf1, elf2) = elves.split_once(",").unwrap();
-            let elf1: Vec<u32> = elf1.split("-").flat_map(str::parse::<u32>).collect();
-            let elf2: Vec<u32> = elf2.split("-").flat_map(str::parse::<u32>).collect();
-            let elf1: HashSet<u32> = (elf1[0]..=elf1[1]).collect();
-            for n in elf2[0]..=elf2[1] {
-                if elf1.contains(&n) {
-                    return true;
-                }
+            let mut elf1: Vec<u32> = elf1.split("-").flat_map(str::parse::<u32>).collect();
+            let mut elf2: Vec<u32> = elf2.split("-").flat_map(str::parse::<u32>).collect();
+            if elf2[0] < elf1[0] {
+                (elf1, elf2) = (elf2, elf1);
+            }
+            if elf2[0] <= elf1[1] {
+                return true;
             }
             return false;
         })
