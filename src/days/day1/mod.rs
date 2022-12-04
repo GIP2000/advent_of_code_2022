@@ -1,9 +1,11 @@
+// use crate::utill::parse_iter::ParseIterator;
 use std::collections::BinaryHeap;
 pub fn get_n_maxes<const N: usize>(input: &str) -> u32 {
     // O(N + nN + N)
     let mut maxes = [0; N];
     for chunk in input.split("\n\n") {
         let current = chunk.lines().flat_map(str::parse::<u32>).sum::<u32>();
+        // let current = chunk.lines().parse::<u32>().flatten().sum::<u32>();
         for (i, &max) in maxes.iter().enumerate() {
             // if we found a new max replace it
             if current > max {
