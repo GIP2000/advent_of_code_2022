@@ -1,4 +1,4 @@
-use std::collections::LinkedList;
+use std::collections::VecDeque;
 
 fn parse_instruction(instruction: &str) -> Vec<usize> {
     instruction
@@ -8,7 +8,7 @@ fn parse_instruction(instruction: &str) -> Vec<usize> {
         .collect::<Vec<_>>()
 }
 
-fn build_original(original: &str) -> Vec<LinkedList<char>> {
+fn build_original(original: &str) -> Vec<VecDeque<char>> {
     let len = original
         .lines()
         .rev()
@@ -22,7 +22,7 @@ fn build_original(original: &str) -> Vec<LinkedList<char>> {
         .to_digit(10)
         .unwrap();
 
-    let mut v: Vec<LinkedList<char>> = vec![LinkedList::new(); len as usize];
+    let mut v: Vec<VecDeque<char>> = vec![VecDeque::new(); len as usize];
     for crates in original.lines() {
         let mut counter = 0;
         for (i, cr) in crates.split(" ").enumerate() {
