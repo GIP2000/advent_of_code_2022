@@ -9,14 +9,14 @@ use std::{
 
 #[derive(Debug)]
 struct File {
-    pub name: String,
-    pub size: u64,
+    name: String,
+    size: u64,
 }
 
 struct Dir {
-    pub name: String,
-    pub contents: HashMap<String, FileType>,
-    pub parent: Option<Rc<RefCell<Dir>>>,
+    name: String,
+    contents: HashMap<String, FileType>,
+    parent: Option<Rc<RefCell<Dir>>>,
     size: Cell<Option<u64>>,
 }
 
