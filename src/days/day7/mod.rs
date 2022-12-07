@@ -30,6 +30,7 @@ impl FromIterator<Command> for Result<Rc<RefCell<Dir>>> {
                 bail!("First command must be cd")
             }
         };
+
         let fs = Rc::new(RefCell::new(Dir {
             name,
             ..Dir::default()
