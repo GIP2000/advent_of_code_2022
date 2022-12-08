@@ -1,18 +1,19 @@
 use anyhow::{bail, Context, Result};
 use std::{
     cell::{Cell, RefCell},
-    collections::HashMap,
+    collections::{hash_map::Iter, HashMap},
     fmt::Debug,
     rc::Rc,
     str::FromStr,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct File {
     name: String,
     size: u64,
 }
 
+#[derive(Default)]
 struct Dir {
     name: String,
     contents: HashMap<String, FileType>,
@@ -83,13 +84,21 @@ impl FromIterator<Command> for Result<Rc<RefCell<Dir>>> {
     }
 }
 
-impl Default for Dir {
-    fn default() -> Self {
-        Self {
-            name: "".to_string(),
-            contents: HashMap::new(),
-            parent: None,
-            size: Cell::new(None),
+struct DirIter<'a> {
+    iter_stack: Vec<Iter<'a, String, FileType>>,
+}
+
+impl<'a> Iterator for DirIter<'a> {
+    type Item = (&'a String, &'a FileType);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let val = self.iter_stack.last_mut()?.next();
+            if let None = val {
+                self.iter_stack.pop();
+            } else {
+                return val;
+            }
         }
     }
 }
@@ -101,6 +110,12 @@ impl Dir {
             .filter(|s| !s.is_empty())
             .flat_map(str::parse::<Command>)
             .collect::<Result<Rc<RefCell<Self>>>>();
+    }
+
+    pub fn iter<'a>(&'a self) -> DirIter<'a> {
+        DirIter {
+            iter_stack: vec![self.contents.iter()],
+        }
     }
 
     pub fn get_size(&self) -> u64 {
@@ -210,6 +225,7 @@ fn recurssive_min(root: &Rc<RefCell<Dir>>, min: &mut u64, free_space: &u64) {
         };
     }
 }
+
 pub fn part_1(input: &str) -> u64 {
     let fs = Dir::build_fs(input).unwrap();
 
@@ -218,6 +234,14 @@ pub fn part_1(input: &str) -> u64 {
 
     return sum;
 }
+
+// pub fn part_1_f(input: &str) -> u64 {
+//     let fs = Dir::build_fs(input).unwrap();
+//     fs.borrow().iter().filter_map(|(_, ft)| match ft {
+//         FileType::Dir(d) => {},
+//         FileType::File(_) => None,
+//     })
+// }
 pub fn part_2(input: &str) -> u64 {
     let fs = Dir::build_fs(input).unwrap();
 
