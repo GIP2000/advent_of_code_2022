@@ -3,5 +3,5 @@ use std::fs::read_to_string;
 fn main() {
     let val = read_to_string("inputs/day10.txt").expect("Error reading file");
     println!("{}", part_1(&val));
-    println!("{}", part_2(&val));
+    part_2(&val);
 }
