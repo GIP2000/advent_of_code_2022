@@ -8,7 +8,8 @@ type Cords = (usize, usize);
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 struct Node {
     loc: Cords,
-    f: u32,
+    g: u32,
+    h: u32,
 }
 
 impl Add for Node {
@@ -40,7 +41,7 @@ impl SubAssign for Node {
 
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.f.cmp(&self.f).then_with(|| self.loc.cmp(&other.loc))
+        other.f().cmp(&self.f())
     }
 }
 
@@ -51,12 +52,15 @@ impl PartialOrd for Node {
 }
 
 impl Node {
-    pub fn new(loc: Cords, f: u32) -> Self {
-        Self { loc, f }
+    pub fn f(&self) -> u32 {
+        self.h + self.g
+    }
+    pub fn new(loc: Cords, g: u32, h: u32) -> Self {
+        Self { loc, g, h }
     }
 
     pub fn new_root(loc: Cords) -> Self {
-        Self { loc, f: u32::MAX }
+        Self { loc, h: 0, g: 0 }
     }
 }
 
@@ -86,12 +90,12 @@ impl Board {
                 Some(Some(&v)) => {
                     if v <= cv + 1 {
                         let mut new_node = v_node.unwrap();
-                        new_node.f = ((q_node.loc.0 as i32 - new_node.loc.0 as i32).abs()
+                        new_node.g = ((q_node.loc.0 as i32 - new_node.loc.0 as i32).abs()
                             + (q_node.loc.1 as i32 - new_node.loc.1 as i32).abs()
-                            + (self[q_node] as i32 - self[new_node] as i32).abs())
-                            // + (q_node.loc.0 as i32 - self.end.0 as i32).abs()
-                            // + (q_node.loc.1 as i32 - self.end.1 as i32).abs()
-                            // + (self[q_node] as i32 - self[self.end] as i32).abs())
+                            + (cv as i32 - v as i32)) as u32;
+                        new_node.h = ((q_node.loc.0 as i32 - self.end.0 as i32).abs()
+                            + (q_node.loc.1 as i32 - self.end.1 as i32).abs()
+                            + (self[q_node] as i32 - self[self.end] as i32).abs())
                             as u32;
                         successors.push(new_node);
                     }
@@ -172,16 +176,17 @@ impl FromStr for Board {
 
 pub fn part_1(input: &str) -> usize {
     let mut board: Board = input.parse().unwrap();
-    print!("{:?}", board);
+    println!("{:?}", board);
     let mut open: BinaryHeap<Node> = BinaryHeap::new();
     open.push(Node::new_root(board.start));
     let mut closed: Vec<Node> = vec![];
 
     'top: while let Some(q) = open.pop() {
-        println!("q: {:?}", q);
+        println!("o: {:?}", open);
+        println!("  q: {:?}", q);
         let successors = board.get_succesors(q);
         for suc in successors.iter() {
-            println!("suc: {:?}", suc);
+            println!("    suc: {:?}", suc);
             if suc.loc == board.end {
                 println!("Found the END!!!");
                 board.set_parent(suc.loc, q.loc);
@@ -189,17 +194,14 @@ pub fn part_1(input: &str) -> usize {
             }
             if open
                 .iter()
-                .find(|n| n.loc == suc.loc && n.f <= suc.f)
+                .find(|n| n.loc == suc.loc && n.g <= suc.g)
                 .map_or_else(|| false, |_| true)
                 || closed
                     .iter()
-                    .find(|n| n.loc == suc.loc && n.f <= suc.f)
+                    .find(|n| n.loc == suc.loc)
                     .map_or_else(|| false, |_| true)
             {
                 continue;
-            }
-            if suc.loc == (3, 4) {
-                println!("I AM SETTING SUC 3,4 TO {:?}", q.loc);
             }
             board.set_parent(suc.loc, q.loc);
             open.push(*suc);
@@ -208,16 +210,13 @@ pub fn part_1(input: &str) -> usize {
     }
     let mut node = board.get_parent(board.end);
     let mut count = 0;
-    println!("starting search {:?}", node);
+    // println!("starting search {:?} until {:?}", node, board.start);
     while let Some(p) = node {
-        println!("parent: {:?}", p);
-        if p == board.start {
-            return count + 1;
-        }
-        if count >= 50 {
-            return 0;
-        }
+        // println!("parent: {:?}", p);
         count += 1;
+        if p == board.start {
+            return count;
+        }
         node = board.get_parent(p);
     }
     return 0;
