@@ -52,19 +52,21 @@ impl PartialOrd for Node {
 }
 
 impl Node {
-    pub fn f(&self) -> u32 {
-        self.h + self.g
-    }
+    #[allow(dead_code)]
     pub fn new(loc: Cords, g: u32, h: u32) -> Self {
         Self { loc, g, h }
     }
 
     pub fn new_root(loc: Cords) -> Self {
-        Self { loc, h: 0, g: 0 }
+        Self { loc, g: 0, h: 0 }
+    }
+
+    fn f(&self) -> u32 {
+        self.g + self.h
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Board {
     map: Vec<Vec<(u8, Option<Cords>)>>,
     start: Cords,
@@ -90,13 +92,8 @@ impl Board {
                 Some(Some(&v)) => {
                     if v <= cv + 1 {
                         let mut new_node = v_node.unwrap();
-                        new_node.g = ((q_node.loc.0 as i32 - new_node.loc.0 as i32).abs()
-                            + (q_node.loc.1 as i32 - new_node.loc.1 as i32).abs()
-                            + (cv as i32 - v as i32)) as u32;
-                        new_node.h = ((q_node.loc.0 as i32 - self.end.0 as i32).abs()
-                            + (q_node.loc.1 as i32 - self.end.1 as i32).abs()
-                            + (self[q_node] as i32 - self[self.end] as i32).abs())
-                            as u32;
+                        new_node.g = q_node.g + 1;
+                        // new_node.h = 0;
                         successors.push(new_node);
                     }
                 }
@@ -174,55 +171,81 @@ impl FromStr for Board {
     }
 }
 
-pub fn part_1(input: &str) -> usize {
-    let mut board: Board = input.parse().unwrap();
-    println!("{:?}", board);
-    let mut open: BinaryHeap<Node> = BinaryHeap::new();
-    open.push(Node::new_root(board.start));
+fn a_star(mut board: Board) -> usize {
+    // println!("{:?}", board);
+    let mut open: Vec<Node> = vec![Node::new_root(board.start)];
     let mut closed: Vec<Node> = vec![];
 
     'top: while let Some(q) = open.pop() {
-        println!("o: {:?}", open);
-        println!("  q: {:?}", q);
+        // println!("  f(q): {:?}", q.f());
         let successors = board.get_succesors(q);
         for suc in successors.iter() {
-            println!("    suc: {:?}", suc);
+            // println!("    suc: {:?}", suc);
             if suc.loc == board.end {
                 println!("Found the END!!!");
                 board.set_parent(suc.loc, q.loc);
                 break 'top;
             }
-            if open
+            if closed
                 .iter()
-                .find(|n| n.loc == suc.loc && n.g <= suc.g)
+                .find(|n| n.loc == suc.loc)
                 .map_or_else(|| false, |_| true)
-                || closed
-                    .iter()
-                    .find(|n| n.loc == suc.loc)
-                    .map_or_else(|| false, |_| true)
             {
                 continue;
             }
+            if let Some(n) = open
+                .iter_mut()
+                .find(|n| n.loc == suc.loc && n.f() <= suc.f())
+            {
+                n.g = suc.g;
+                n.h = suc.h;
+            } else {
+                open.push(*suc);
+            }
             board.set_parent(suc.loc, q.loc);
-            open.push(*suc);
         }
         closed.push(q);
+        open.sort_by(|a, b| a.cmp(b));
+        // println!("o: {:?}", open);
     }
     let mut node = board.get_parent(board.end);
     let mut count = 0;
     // println!("starting search {:?} until {:?}", node, board.start);
+    // print!("{:?} -> ", board.end);
     while let Some(p) = node {
-        // println!("parent: {:?}", p);
         count += 1;
         if p == board.start {
+            // println!("{:?}", p);
             return count;
         }
+        // print!("{:?} -> ", p);
         node = board.get_parent(p);
     }
     return 0;
 }
+
+pub fn part_1(input: &str) -> usize {
+    let board: Board = input.parse().unwrap();
+    return a_star(board);
+}
 pub fn part_2(input: &str) -> usize {
-    0
+    let board: Board = input.parse().unwrap();
+    let mut min_val = usize::MAX;
+
+    for y in 0..board.map.len() {
+        for x in 0..board.map[y].len() {
+            if board.map[y][x].0 != 0 {
+                continue;
+            }
+            let mut b = board.clone();
+            b.start = (y, x);
+            let cur = a_star(b);
+            if cur < min_val {
+                min_val = cur;
+            }
+        }
+    }
+    return min_val;
 }
 
 #[cfg(test)]
@@ -240,6 +263,6 @@ abdefghi";
     }
     #[test]
     fn test_part_2() {
-        assert_eq!(part_2(INPUT), 0);
+        assert_eq!(part_2(INPUT), 29);
     }
 }
