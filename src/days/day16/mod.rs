@@ -1,5 +1,10 @@
 use anyhow::{Context, Result};
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeSet, HashMap, HashSet},
+    fmt::Debug,
+    rc::Rc,
+};
 
 struct Valve {
     flow_rate: u32,
@@ -23,7 +28,7 @@ impl Debug for Valve {
     }
 }
 
-fn parse_graph(input: &str) -> Result<Vec<Rc<RefCell<Valve>>>> {
+fn parse_graph(input: &str) -> Result<HashMap<String, Rc<RefCell<Valve>>>> {
     let mut map: HashMap<String, Rc<RefCell<Valve>>> = HashMap::new();
 
     let mut verts = input
@@ -77,19 +82,148 @@ fn parse_graph(input: &str) -> Result<Vec<Rc<RefCell<Valve>>>> {
             }
         })
         .collect::<Result<Vec<_>>>()?;
-
-    verts.sort_by(|a, b| a.borrow().name.cmp(&b.borrow().name));
-    return Ok(verts);
+    return Ok(map);
 }
 
-pub fn part_1(input: &str) -> usize {
-    let verts = parse_graph(input).unwrap();
-    println!("{:?}", verts);
-    0
+fn max_flow(
+    verts: &HashMap<String, Rc<RefCell<Valve>>>,
+    dp: &mut HashMap<(String, String, u32), u32>,
+    cur: String,
+    opened: &HashSet<String>,
+    min_left: u32,
+) -> u32 {
+    // check for dp
+    let mut opened_str = opened.iter().cloned().collect::<Vec<_>>();
+    opened_str.sort();
+    let opened_str = opened_str.join("");
+    let dp_key = (cur.clone(), opened_str, min_left);
+    if let Some(&v) = dp.get(&dp_key) {
+        return v;
+    }
+    // base case
+    if min_left <= 0 {
+        return 0;
+    }
+
+    let mut best = 0;
+    let val = (min_left - 1) * verts.get(&cur).unwrap().borrow().flow_rate;
+    for adj in verts
+        .get(&cur)
+        .unwrap()
+        .borrow()
+        .tunnels
+        .iter()
+        .map(|adj| adj.borrow())
+    {
+        if val != 0 && !opened.contains(&cur) {
+            let mut cur_opened = opened.clone();
+            cur_opened.insert(cur.clone());
+            best = std::cmp::max(
+                best,
+                val + max_flow(verts, dp, adj.name.clone(), &cur_opened, min_left - 2),
+            );
+        }
+        best = std::cmp::max(
+            best,
+            max_flow(verts, dp, adj.name.clone(), &opened, min_left - 1),
+        );
+    }
+    dp.insert(dp_key, best);
+    return best;
 }
-pub fn part_2(input: &str) -> usize {
+
+fn max_flow_2(
+    verts: &HashMap<String, Rc<RefCell<Valve>>>,
+    dp: &mut HashMap<(String, String, u32), u32>,
+    cur: String,
+    opened: &HashSet<String>,
+    best_path: &mut Vec<HashSet<String>>,
+    min_left: u32,
+) -> u32 {
+    // check for dp
+    let mut opened_str = opened.iter().cloned().collect::<Vec<_>>();
+    opened_str.sort();
+    let opened_str = opened_str.join("");
+    let dp_key = (cur.clone(), opened_str, min_left);
+    if let Some(&v) = dp.get(&dp_key) {
+        return v;
+    }
+    // base case
+    if min_left <= 0 {
+        return 0;
+    }
+
+    let mut best = 0;
+    let val = (min_left - 1) * verts.get(&cur).unwrap().borrow().flow_rate;
+    for adj in verts
+        .get(&cur)
+        .unwrap()
+        .borrow()
+        .tunnels
+        .iter()
+        .map(|adj| adj.borrow())
+    {
+        if val != 0 && !opened.contains(&cur) {
+            let mut cur_opened = opened.clone();
+            cur_opened.insert(cur.clone());
+            let mut pot_opened = cur_opened.clone();
+            let val_add = val
+                + max_flow_2(
+                    verts,
+                    dp,
+                    adj.name.clone(),
+                    &cur_opened,
+                    best_path,
+                    min_left - 2,
+                );
+            best = std::cmp::max(best, val_add);
+            // if val_add > best {
+            //     best = val_add;
+            // }
+        }
+        let mut pot_opened = opened.clone();
+        let val_no_add = max_flow_2(
+            verts,
+            dp,
+            adj.name.clone(),
+            &opened,
+            best_path,
+            min_left - 1,
+        );
+        best = std::cmp::max(best, val_no_add);
+    }
+    dp.insert(dp_key, best);
+    return best;
+}
+
+pub fn part_1(input: &str) -> u32 {
     let verts = parse_graph(input).unwrap();
-    0
+    return max_flow_2(
+        &verts,
+        &mut HashMap::new(),
+        "AA".to_string(),
+        &HashSet::new(),
+        &mut HashSet::new(),
+        30,
+    );
+}
+pub fn part_2(input: &str) -> u32 {
+    let verts = parse_graph(input).unwrap();
+    let mut best = HashSet::new();
+    let mut dp = HashMap::new();
+    let val = max_flow_2(
+        &verts,
+        &mut dp,
+        "AA".to_string(),
+        &HashSet::new(),
+        &mut best,
+        26,
+    );
+    println!("val: {val} best: {best:?}");
+    let mut best_2 = HashSet::new();
+    let val2 = max_flow_2(&verts, &mut dp, "AA".to_string(), &best, &mut best_2, 26);
+    println!("val2 {val2}, best_2: {best_2:?}");
+    val2 + val
 }
 
 #[cfg(test)]
@@ -112,6 +246,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
     }
     #[test]
     fn test_part_2() {
-        assert_eq!(part_2(INPUT), 0);
+        assert_eq!(part_2(INPUT), 1707);
     }
 }
